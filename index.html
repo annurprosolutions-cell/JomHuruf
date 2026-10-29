@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>JomHuruf</title>
+  <meta name="description" content="JomHuruf: permainan Nama, Benda, Binatang dalam talian. Main serentak dengan kawan, karakter 3D dan papan markah langsung.">
+  <meta name="theme-color" content="#1b4d9b">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f6c945'/%3E%3Ctext x='32' y='46' font-family='Arial Black,Arial' font-weight='900' font-size='40' text-anchor='middle' fill='%231b4d9b'%3EA%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/game.css">
+  <script src="vendor/peerjs.min.js"></script>
+  <script src="vendor/qrcode.js"></script>
+</head>
+<body>
+  <!-- ============================================================ UTAMA -->
+  <section class="screen" id="scr-home">
+    <div class="topbar">
+      <span class="title">RuzPrompt</span>
+      <button class="icon-btn" data-action="mute" aria-label="Bunyi on/off">🔊</button>
+    </div>
+    <div class="center-col">
+      <div class="logo">Jom<span class="logo-accent">Huruf</span><small>Nama, Benda, Binatang versi dalam talian</small></div>
+      <div class="letter-strip" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span></div>
+      <form class="card home-card" id="join-form" autocomplete="off">
+        <input class="pin-input" id="pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="PIN bilik" aria-label="PIN bilik">
+        <button class="btn primary big block" type="submit">Masuk bilik</button>
+        <div class="form-error" id="home-error" role="alert"></div>
+      </form>
+      <div class="home-links">
+        <button class="btn go big" id="btn-host">+ Buka bilik baru</button>
+      </div>
+      <div class="stats" id="home-stats" role="group" aria-label="Statistik penggunaan" hidden>
+        <div class="stat" data-stat="views"><b>0</b><span>👀 paparan</span></div>
+        <div class="stat" data-stat="users"><b>0</b><span>👥 orang dah main</span></div>
+        <div class="stat" data-stat="games"><b>0</b><span>🎮 permainan dimainkan</span></div>
+      </div>
+      <details class="how card">
+        <summary>Cara main</summary>
+        <ol>
+          <li>Seorang buka bilik, pilih 5 kolum (contoh: Nama, Benda, Binatang, Buah/Sayur, Negara) dan bahasa.</li>
+          <li>Kawan-kawan masuk guna PIN atau imbas QR, kemudian reka karakter 3D masing-masing.</li>
+          <li>Setiap pusingan, seorang pemain (ikut giliran) pilih satu huruf. Huruf yang dah dipilih tak boleh dipilih lagi.</li>
+          <li>Semua orang isi kelima-lima kolum bermula dengan huruf itu. Lebih cepat hantar, lebih banyak mata.</li>
+          <li>Jawapan disemak automatik. Pemain dengan markah tertinggi selepas huruf terakhir menang.</li>
+        </ol>
+      </details>
+      <p class="foot-note">Tiada akaun diperlukan. Telefon pemain bersambung terus ke peranti hos (peer-to-peer). Hanya bilangan kasar (paparan, pemain, permainan) dikira, tanpa nama atau data peribadi.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ UMUM -->
+  <section class="screen" id="scr-loading" hidden>
+    <div class="center-col">
+      <div class="spinner"></div>
+      <div class="status-big" id="loading-text">Menyambung...</div>
+      <div class="muted" id="loading-sub"></div>
+      <button class="btn ghost" id="loading-cancel">Batal</button>
+    </div>
+  </section>
+
+  <section class="screen" id="scr-error" hidden>
+    <div class="center-col">
+      <div class="status-big" id="error-title">Alamak</div>
+      <p class="muted" id="error-text"></p>
+      <button class="btn big" id="error-home">Kembali ke laman utama</button>
+    </div>
+  </section>
+
+  <!-- ============================================================ TETAPAN HOS -->
+  <section class="screen" id="scr-h-setup" hidden>
+    <div class="topbar">
+      <span class="title">Buka bilik baru</span>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" data-action="mute" aria-label="Bunyi on/off">🔊</button>
+        <button class="btn small ghost" id="setup-back">Keluar</button>
+      </div>
+    </div>
+    <div class="wrap setup-wrap">
+      <div class="resume-banner" id="resume-banner" hidden>
+        <span id="resume-text"></span>
+        <span style="display:flex;gap:8px"><button class="btn small go" id="resume-yes">Sambung</button><button class="btn small" id="resume-no">Buang</button></span>
+      </div>
+      <div class="card setup-card">
+        <h3>1. Bahasa jawapan</h3>
+        <div class="segs" id="set-lang"></div>
+        <p class="muted small">Jawapan disemak dengan senarai perkataan bahasa ini.</p>
+      </div>
+      <div class="card setup-card">
+        <div class="setup-head"><h3>2. Pilih 5 kolum</h3><span class="count-tag" id="cols-count"></span></div>
+        <div class="cat-grid" id="set-cols"></div>
+        <p class="muted small">Kolum "bebas" (Nama, Benda) diterima asalkan bermula dengan huruf yang betul dan bukan merapu. Kolum lain mesti ada dalam senarai perkataan.</p>
+      </div>
+      <div class="card setup-card">
+        <h3>3. Panjang permainan</h3>
+        <div class="segs" id="set-letters"></div>
+        <h3 style="margin-top:14px">Masa menjawab setiap huruf</h3>
+        <div class="segs" id="set-time"></div>
+        <label class="toggle" style="margin-top:14px">Kira detik 15 saat bila orang pertama hantar <input type="checkbox" id="set-hurry"></label>
+        <label class="toggle">Benarkan masuk lewat <input type="checkbox" id="set-late"></label>
+      </div>
+      <button class="btn go big block" id="btn-open-room">Buka bilik</button>
+      <p class="muted small center">Anda juga akan bermain. Peranti ini menjadi "pelayan" bilik: jangan tutup tab atau kunci skrin sehingga permainan tamat.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ PEMAIN: CIPTA KARAKTER -->
+  <section class="screen" id="scr-p-create" hidden>
+    <div class="topbar">
+      <span class="title">Cipta karakter anda</span>
+      <span class="pill" id="create-pin"></span>
+    </div>
+    <div class="creator">
+      <div class="creator-stage">
+        <div class="stage-box" id="create-stage"></div>
+        <div class="stage-hint">Seret untuk pusing • Ketik untuk lompat</div>
+      </div>
+      <div class="creator-panel">
+        <div class="creator-head">
+          <label for="name-input">Nama panggilan</label>
+          <input class="text-input" id="name-input" maxlength="16" placeholder="Contoh: Aisyah" autocomplete="off">
+          <div class="form-error" id="create-error" role="alert"></div>
+        </div>
+        <div class="tabs" id="creator-tabs" role="tablist"></div>
+        <div class="tab-body" id="creator-body"></div>
+        <div class="creator-foot">
+          <button class="btn" id="btn-random">🎲 Rawak</button>
+          <button class="btn go" id="btn-join">Masuk bilik</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ LOBI -->
+  <section class="screen" id="scr-lobby" hidden>
+    <div class="p-top">
+      <span class="pill" id="lb-pin"></span>
+      <span style="display:flex;gap:6px;align-items:center">
+        <button class="icon-btn small" data-action="mute" aria-label="Bunyi on/off">🔊</button>
+        <button class="btn small ghost" id="lb-leave">Keluar</button>
+      </span>
+    </div>
+    <div class="lobby-grid">
+      <div class="lobby-share card">
+        <div class="share-row">
+          <div>
+            <div class="lbl">PIN bilik</div>
+            <div class="pin" id="lb-pin-big"></div>
+            <button class="btn small" id="lb-share">Kongsi pautan</button>
+          </div>
+          <div id="lb-qr"></div>
+        </div>
+        <div class="room-meta" id="lb-meta"></div>
+      </div>
+      <div class="lobby-crowd">
+        <div class="stage-box" id="lb-stage"></div>
+        <div class="empty-lobby" id="lb-empty" hidden></div>
+      </div>
+      <div class="lobby-side">
+        <div class="head"><span class="count-badge">👥 <span id="lb-count">0</span></span><span class="muted small" id="lb-hint"></span></div>
+        <div class="player-list" id="lb-list"></div>
+      </div>
+    </div>
+    <div class="lobby-foot">
+      <div class="emotes">
+        <button class="btn small ghost" data-emote="jump">Lompat</button>
+        <button class="btn small ghost" data-emote="wave">Lambai</button>
+        <button class="btn small ghost" data-emote="dance">Menari</button>
+        <button class="btn small ghost" data-emote="spin">Pusing</button>
+        <button class="btn small" id="lb-edit">Tukar karakter</button>
+      </div>
+      <div class="host-bar" id="lb-host" hidden>
+        <button class="btn ghost" id="lb-lock">Kunci bilik</button>
+        <button class="btn go big" id="lb-start">Mula</button>
+      </div>
+      <div class="muted wait-note" id="lb-wait">Tunggu hos mulakan permainan...</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ MENUNGGU (permainan sedang berjalan) -->
+  <section class="screen" id="scr-hold" hidden>
+    <div class="p-top"><span class="pill" id="hd-pin"></span><span class="pill" id="hd-name"></span></div>
+    <div class="center-col">
+      <div class="status-big" id="hd-title">Anda dalam permainan!</div>
+      <div class="muted" id="hd-sub">Tunggu pusingan seterusnya...</div>
+      <div class="p-stage" id="hd-stage"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ PILIH HURUF -->
+  <section class="screen" id="scr-pick" hidden>
+    <div class="p-top"><span class="pill" id="pk-round"></span><span class="pill" id="pk-time">⏱</span></div>
+    <div class="pick-head">
+      <div id="pk-portrait"></div>
+      <div>
+        <div class="status-mid" id="pk-title"></div>
+        <div class="muted" id="pk-sub"></div>
+      </div>
+    </div>
+    <div class="timer-bar wide"><i id="pk-bar"></i></div>
+    <div class="letter-grid" id="pk-grid"></div>
+    <div class="muted small center" id="pk-legend">Angka kecil = berapa kolum ada jawapan untuk huruf itu.</div>
+  </section>
+
+  <!-- ============================================================ HURUF DIPILIH -->
+  <section class="screen" id="scr-letter" hidden>
+    <div class="p-top"><span class="pill" id="lt-round"></span><span class="pill" id="lt-score"></span></div>
+    <div class="center-col">
+      <div class="muted" id="lt-by"></div>
+      <div class="big-letter" id="lt-letter"></div>
+      <div class="col-tags" id="lt-cols"></div>
+      <div class="timer-bar"><i id="lt-bar"></i></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ JAWAB -->
+  <section class="screen" id="scr-answer" hidden>
+    <div class="p-top">
+      <span class="pill" id="an-round"></span>
+      <span class="letter-badge" id="an-letter"></span>
+      <span class="pill timer-pill" id="an-time">⏱</span>
+    </div>
+    <div class="hurry" id="an-hurry" hidden></div>
+    <form class="answer-form" id="an-form" autocomplete="off"></form>
+    <div class="answer-foot">
+      <span class="muted small" id="an-progress"></span>
+      <button class="btn go big" id="an-submit" type="button">Hantar</button>
+    </div>
+  </section>
+
+  <!-- ============================================================ DAH HANTAR -->
+  <section class="screen" id="scr-wait" hidden>
+    <div class="p-top"><span class="pill" id="wt-round"></span><span class="pill timer-pill" id="wt-time">⏱</span></div>
+    <div class="center-col">
+      <div class="status-big">Jawapan dihantar!</div>
+      <div class="muted" id="wt-progress"></div>
+      <div class="hurry" id="wt-hurry" hidden></div>
+      <div class="echo-list" id="wt-echo"></div>
+      <div class="p-stage short" id="wt-stage"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ KEPUTUSAN PUSINGAN -->
+  <section class="screen result-screen" id="scr-result" hidden>
+    <div class="p-top"><span class="pill" id="rs-round"></span><span class="pill" id="rs-name"></span></div>
+    <div class="result-body">
+      <div class="result-hero">
+        <div class="p-stage tiny" id="rs-stage"></div>
+        <div>
+          <div class="status-big" id="rs-title"></div>
+          <div class="points-pill" id="rs-points"></div>
+          <div class="streak" id="rs-streak"></div>
+        </div>
+      </div>
+      <div class="breakdown card" id="rs-cells"></div>
+      <div class="muted small" id="rs-detail"></div>
+      <div class="rank-line" id="rs-rank"></div>
+      <div class="mini-board" id="rs-board"></div>
+      <details class="all-answers" id="rs-all-wrap">
+        <summary>Jawapan semua pemain</summary>
+        <div id="rs-all"></div>
+      </details>
+    </div>
+    <div class="answer-foot">
+      <span class="muted small" id="rs-next"></span>
+      <button class="btn go" id="rs-continue" hidden>Teruskan</button>
+    </div>
+  </section>
+
+  <!-- ============================================================ AKHIR -->
+  <section class="screen" id="scr-final" hidden>
+    <div class="p-top"><span class="pill" id="fn-pin"></span><span class="pill" id="fn-name"></span></div>
+    <div class="final-body">
+      <div class="podium-wrap phone">
+        <div class="stage-box" id="fn-stage"></div>
+        <div class="podium-tags" id="fn-tags"></div>
+      </div>
+      <div class="status-big" id="fn-title"></div>
+      <div class="points-pill" id="fn-score"></div>
+      <div class="highlights" id="fn-highlights"></div>
+      <div class="mini-board" id="fn-board"></div>
+      <div class="final-actions">
+        <button class="btn ghost" id="fn-csv" hidden>Muat turun CSV</button>
+        <button class="btn go" id="fn-again" hidden>Main lagi</button>
+        <button class="btn" id="fn-home">Laman utama</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ LAPISAN -->
+  <div class="overlay" id="reconnect" hidden>
+    <div class="spinner"></div>
+    <div class="status-big" id="reconnect-text">Menyambung semula...</div>
+    <div class="muted" id="reconnect-sub">Jangan tutup halaman ini. Markah anda selamat.</div>
+  </div>
+
+  <footer class="site-foot">By RuzPrompt Copyright 2026</footer>
+
+  <noscript><div class="overlay">Sila aktifkan JavaScript untuk bermain.</div></noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
